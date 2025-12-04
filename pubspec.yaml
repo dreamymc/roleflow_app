@@ -16,6 +16,8 @@ dependencies:
   # Authentic Sign-In Tools
   google_sign_in: ^6.1.5  # Downgrading slightly to ensure compatibility with standard auth
   flutter_svg: ^2.1.0
+  cloud_firestore: ^6.1.0
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:
