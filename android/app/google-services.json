@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "527750691168",
+    "project_id": "roleflow-328d9",
+    "storage_bucket": "roleflow-328d9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527750691168:android:6ed443e175704935e9c605",
+        "android_client_info": {
+          "package_name": "com.example.roleflow_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "527750691168-tsj8pnlj8tk7uiaqpmovt33nmvscl50v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqUUrkenSOMfxKXvDiJy7x1Ykct9fguJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "527750691168-tsj8pnlj8tk7uiaqpmovt33nmvscl50v.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
