@@ -5,6 +5,7 @@ import 'dart:math';
 import '../../models/role.dart';
 import '../../models/routine_model.dart';
 import 'edit_routine_sheet.dart';
+import 'routine_history_screen.dart'; // <--- NEW IMPORT
 
 class RoutineCard extends StatefulWidget {
   final Routine routine;
@@ -26,7 +27,8 @@ class RoutineCard extends StatefulWidget {
   State<RoutineCard> createState() => _RoutineCardState();
 }
 
-class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStateMixin {
+class _RoutineCardState extends State<RoutineCard>
+    with SingleTickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _bounceController;
   late Animation<double> _scaleAnimation;
@@ -34,14 +36,15 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    // Shorter duration for snappy feel, but we'll control emission flow manually
-    _confettiController = ConfettiController(duration: const Duration(milliseconds: 800));
-    
+    _confettiController = ConfettiController(
+      duration: const Duration(milliseconds: 800),
+    );
+
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
       lowerBound: 0.0,
-      upperBound: 1.0, 
+      upperBound: 1.0,
     );
 
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.25).animate(
@@ -57,50 +60,32 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
   }
 
   void _handleTap() async {
-    // 1. BOUNCE
     await _bounceController.forward();
     await _bounceController.reverse();
-
-    // 2. LOGIC
     widget.onIncrement();
-
-    // 3. FIRE ALWAYS (The "Always Reward" Strategy)
-    // We just reset it to ensure it fires fresh every click
     _confettiController.stop();
     _confettiController.play();
   }
 
-  // --- CONFIGURABLE CONFETTI LOGIC ---
   List<Color> _getBlastColors(bool isTargetMet, bool isOverAchiever) {
     if (isOverAchiever) {
-      // GRANDUER: Mix of Gold, Role Color, and White
       return [Colors.amber, Colors.orange, Colors.white, widget.role.color];
     } else if (isTargetMet) {
-      // TARGET HIT: Pure Gold
       return [Colors.amber, Colors.yellow, Colors.orange];
     } else {
-      // NORMAL STEP: Role Colors
       return [widget.role.color, Colors.blueGrey, Colors.white];
     }
   }
 
-  double _getBlastForce(bool isTargetMet, bool isOverAchiever) {
-    if (isOverAchiever) return 20; // Massive explosion
-    if (isTargetMet) return 10;    // Big pop
-    return 5;                      // Standard pop
-  }
-
   @override
   Widget build(BuildContext context) {
-    // We check (count + 1) logic relative to current UI state for visual feedback
-    // But since this re-renders after update, we use current state logic.
-    // Actually, for the confetti triggering *right now*, we want to know what state we are ENTERING.
-    // The build method runs *after* the update, so:
     final bool isTargetMet = widget.routine.count >= widget.routine.target;
     final bool isOverAchiever = widget.routine.count > widget.routine.target;
-    
-    final double progress = (widget.routine.count / widget.routine.target).clamp(0.0, 1.0);
-    final String startStr = DateFormat('MMM d').format(widget.routine.startDate);
+    final double progress = (widget.routine.count / widget.routine.target)
+        .clamp(0.0, 1.0);
+    final String startStr = DateFormat(
+      'MMM d',
+    ).format(widget.routine.startDate);
 
     return Stack(
       alignment: Alignment.center,
@@ -110,55 +95,54 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: isOverAchiever 
-               ? const BorderSide(color: Colors.amber, width: 2) 
-               : BorderSide.none,
+            side: isOverAchiever
+                ? const BorderSide(color: Colors.amber, width: 2)
+                : BorderSide.none,
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ROW 1: Title & Button
+                // ROW 1: HEADER & ACTIONS
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- ZONE C: BODY (Tap to History) ---
                     Expanded(
                       child: InkWell(
                         onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                            ),
-                            builder: (context) => EditRoutineSheet(
-                              routine: widget.routine,
-                              roleId: widget.role.id,
-                              roleColor: widget.role.color,
+                          // Navigate to History Screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RoutineHistoryScreen(
+                                routine: widget.routine,
+                                role: widget.role,
+                              ),
                             ),
                           );
                         },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  widget.routine.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                ),
-                                const SizedBox(width: 6),
-                                Icon(Icons.edit, size: 14, color: Colors.grey[400]),
-                              ],
+                            Text(
+                              widget.routine.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                             if (widget.routine.description.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4.0),
                                 child: Text(
                                   widget.routine.description,
-                                  style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -167,35 +151,62 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    
-                    // --- THE BUTTON ---
-                    widget.isCompletedToday 
-                    ? Tooltip(
-                        message: "Done for today! Long press to undo.",
-                        child: InkWell(
-                          onLongPress: widget.onUndo,
-                          child: CircleAvatar(
-                            backgroundColor: Colors.grey[300],
-                            child: const Icon(Icons.check, color: Colors.white),
+
+                    // --- ZONE B: EDIT BUTTON (Separate Action) ---
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 20, color: Colors.grey[400]),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
                           ),
-                        ),
-                      )
-                    : ScaleTransition(
-                        scale: _scaleAnimation,
-                        child: IconButton.filled(
-                          icon: const Icon(Icons.add),
-                          style: IconButton.styleFrom(
-                            backgroundColor: isTargetMet ? (isOverAchiever ? Colors.amber : Colors.green) : widget.role.color,
+                          builder: (context) => EditRoutineSheet(
+                            routine: widget.routine,
+                            roleId: widget.role.id,
+                            roleColor: widget.role.color,
                           ),
-                          onPressed: _handleTap,
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+
+                    // --- ZONE A: INCREMENT BUTTON ---
+                    widget.isCompletedToday
+                        ? Tooltip(
+                            message: "Done for today! Long press to undo.",
+                            child: InkWell(
+                              onLongPress: widget.onUndo,
+                              child: CircleAvatar(
+                                backgroundColor: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : ScaleTransition(
+                            scale: _scaleAnimation,
+                            child: IconButton.filled(
+                              icon: const Icon(Icons.add),
+                              style: IconButton.styleFrom(
+                                backgroundColor: isTargetMet
+                                    ? (isOverAchiever
+                                          ? Colors.amber
+                                          : Colors.green)
+                                    : widget.role.color,
+                              ),
+                              onPressed: _handleTap,
+                            ),
+                          ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
-                // ROW 2: Progress
+
+                // ROW 2: Progress Bar
                 Row(
                   children: [
                     Expanded(
@@ -206,18 +217,26 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
                           minHeight: 8,
                           backgroundColor: Colors.grey[200],
                           valueColor: AlwaysStoppedAnimation(
-                            isOverAchiever ? Colors.amber : (isTargetMet ? Colors.green : widget.role.color),
+                            isOverAchiever
+                                ? Colors.amber
+                                : (isTargetMet
+                                      ? Colors.green
+                                      : widget.role.color),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      isOverAchiever ? "OVER-ACHIEVER! 🔥" : "${widget.routine.count}/${widget.routine.target} this week",
+                      isOverAchiever
+                          ? "OVER-ACHIEVER! 🔥"
+                          : "${widget.routine.count}/${widget.routine.target} this week",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
-                        color: isOverAchiever ? Colors.amber[800] : Colors.grey[600],
+                        color: isOverAchiever
+                            ? Colors.amber[800]
+                            : Colors.grey[600],
                       ),
                     ),
                   ],
@@ -229,11 +248,19 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
                 // ROW 3: Stats
                 Row(
                   children: [
-                    Icon(Icons.local_fire_department, size: 16, color: Colors.orange[800]),
+                    Icon(
+                      Icons.local_fire_department,
+                      size: 16,
+                      color: Colors.orange[800],
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       "${widget.routine.totalLifetimeCount} total checks",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
                     ),
                     const Spacer(),
                     Text(
@@ -246,18 +273,15 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
             ),
           ),
         ),
-        
-        // --- DYNAMIC CONFETTI CANNON ---
+
         ConfettiWidget(
           confettiController: _confettiController,
-          blastDirectionality: BlastDirectionality.explosive, 
+          blastDirectionality: BlastDirectionality.explosive,
           shouldLoop: false,
           colors: _getBlastColors(isTargetMet, isOverAchiever),
-          // Logic: Normal = 5 particles, Target = 15 particles, Grandeur = 30 particles
           numberOfParticles: isOverAchiever ? 30 : (isTargetMet ? 15 : 7),
-          // Logic: Grandeur shoots faster/further
           gravity: isOverAchiever ? 0.2 : 0.1,
-          createParticlePath: drawStar, 
+          createParticlePath: drawStar,
         ),
       ],
     );
@@ -276,8 +300,14 @@ class _RoutineCardState extends State<RoutineCard> with SingleTickerProviderStat
     path.moveTo(size.width, halfWidth);
 
     for (double step = 0; step < fullAngle; step += degreesPerStep) {
-      path.lineTo(halfWidth + externalRadius * cos(step), halfWidth + externalRadius * sin(step));
-      path.lineTo(halfWidth + internalRadius * cos(step + halfDegreesPerStep), halfWidth + internalRadius * sin(step + halfDegreesPerStep));
+      path.lineTo(
+        halfWidth + externalRadius * cos(step),
+        halfWidth + externalRadius * sin(step),
+      );
+      path.lineTo(
+        halfWidth + internalRadius * cos(step + halfDegreesPerStep),
+        halfWidth + internalRadius * sin(step + halfDegreesPerStep),
+      );
     }
     path.close();
     return path;

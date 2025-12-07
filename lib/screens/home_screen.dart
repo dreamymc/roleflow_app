@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Ensure this is imported
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../services/auth_service.dart';
 import '../models/role.dart';
 import 'role_detail_screen.dart'; 
@@ -129,121 +129,121 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final String? photoURL = user?.photoURL;
-    final String email = user?.email ?? 'User';
-    // Fix: Explicitly check displayName. If null, use empty string to hide the row or fallback.
     final String name = user?.displayName ?? 'RoleFlow User';
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      // FAB TO ADD NEW ROLE
-      floatingActionButton: FloatingActionButton(
+      backgroundColor: const Color(0xFFF5F7FA),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddRoleDialog,
-        backgroundColor: Colors.blueGrey,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Colors.black87,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text("New Role", style: TextStyle(color: Colors.white)),
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ------------------------------------------------
-            // 1. THE DASHBOARD HEADER
-            // ------------------------------------------------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              // --- HEADER ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.blueGrey,
-                    backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
-                    child: photoURL == null 
-                        ? const Text('?', style: TextStyle(fontSize: 24, color: Colors.white)) // Fallback char
-                        : null,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back,',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 24, 
+                          fontWeight: FontWeight.w900, 
+                          color: Colors.black87
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name, // Display Name is here now
-                          style: const TextStyle(
-                            fontSize: 18, 
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87
-                          ),
-                        ),
-                        Text(
-                          email,
-                          style: TextStyle(
-                            fontSize: 14, 
-                            color: Colors.grey[600],
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                  GestureDetector(
+                    onTap: () async => await AuthService().signOut(),
+                    child: CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                      child: photoURL == null 
+                          ? const Icon(Icons.person, color: Colors.grey) 
+                          : null,
                     ),
-                  ),
-
-                  IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
-                    onPressed: () async => await AuthService().signOut(),
                   ),
                 ],
               ),
-            ),
-            
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              child: Text(
-                'Your Roles',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+              
+              const SizedBox(height: 30),
+              const Text(
+                'Your Dashboard',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
               ),
-            ),
+              const SizedBox(height: 16),
 
-            // ------------------------------------------------
-            // 2. THE ROLE LIST
-            // ------------------------------------------------
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user!.uid)
-                    .collection('roles')
-                    .orderBy('createdAt', descending: false)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) return const Center(child: Text('Error loading roles'));
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              // --- GRID OF ROLES ---
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user!.uid)
+                      .collection('roles')
+                      .orderBy('createdAt', descending: false)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) return const Center(child: Text('Error loading roles'));
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                  final docs = snapshot.data!.docs;
-                  
-                  if (docs.isEmpty) {
-                    return const Center(child: Text("No roles defined yet. Tap + to add one."));
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 80), // Extra bottom padding for FAB
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final role = Role.fromFirestore(
-                        docs[index].data() as Map<String, dynamic>, 
-                        docs[index].id
+                    final docs = snapshot.data!.docs;
+                    
+                    if (docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.dashboard_customize, size: 60, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            const Text("No roles yet. Create your first one!", style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
                       );
-                      
-                      return _RoleDashboardCard(
-                        role: role, 
-                        onLongPress: () => _deleteRole(role.id, role.name),
-                      );
-                    },
-                  );
-                },
+                    }
+
+                    return GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, 
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.85, 
+                      ),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final role = Role.fromFirestore(
+                          docs[index].data() as Map<String, dynamic>, 
+                          docs[index].id
+                        );
+                        
+                        return _RoleGridCard(
+                          role: role, 
+                          onLongPress: () => _deleteRole(role.id, role.name),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -251,20 +251,20 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ------------------------------------------------------
-// HELPER: Role Card
+// HELPER: The "Mini-HUD" Card
 // ------------------------------------------------------
-class _RoleDashboardCard extends StatelessWidget {
+class _RoleGridCard extends StatelessWidget {
   final Role role;
   final VoidCallback onLongPress;
 
-  const _RoleDashboardCard({required this.role, required this.onLongPress});
+  const _RoleGridCard({required this.role, required this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     return GestureDetector(
-      onLongPress: onLongPress, // DELETE TRIGGER
+      onLongPress: onLongPress,
       onTap: () {
         Navigator.push(
           context,
@@ -274,75 +274,159 @@ class _RoleDashboardCard extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: role.color.withOpacity(0.1), // Colored Shadow
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 12, color: role.color),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          role.name,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: role.color,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(user!.uid)
-                              .collection('roles')
-                              .doc(role.id)
-                              .collection('tasks')
-                              .where('isCompleted', isEqualTo: false)
-                              .snapshots(),
-                          builder: (context, taskSnapshot) {
-                            int count = 0;
-                            if (taskSnapshot.hasData) {
-                              count = taskSnapshot.data!.docs.length;
-                            }
-                            return Row(
-                              children: [
-                                Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[700]),
-                                const SizedBox(width: 4),
-                                Text('$count Tasks', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Icon Circle & Menu Dots
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: role.color.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.layers, color: role.color, size: 20),
+                  ),
+                  Icon(Icons.more_horiz, color: Colors.grey[300], size: 20),
+                ],
+              ),
+              
+              const Spacer(),
+              
+              // Role Name
+              Text(
+                role.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  letterSpacing: -0.5,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+
+              // --- LIVE STATS ROW ---
+              Row(
+                children: [
+                  // 1. TASK STAT (Pending)
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user!.uid)
+                          .collection('roles')
+                          .doc(role.id)
+                          .collection('tasks')
+                          .where('isCompleted', isEqualTo: false)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                        return _StatPill(
+                          count: count, 
+                          icon: Icons.check_circle_outline, 
+                          label: "Tasks",
+                          color: Colors.grey[700]!,
+                        );
+                      },
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[300]),
-                ),
-              ],
-            ),
+                  
+                  const SizedBox(width: 8),
+
+                  // 2. ROUTINE STAT (Total)
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user!.uid)
+                          .collection('roles')
+                          .doc(role.id)
+                          .collection('routines')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                        return _StatPill(
+                          count: count, 
+                          icon: Icons.repeat, 
+                          label: "Habits",
+                          color: role.color, // Colored to pop
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------
+// HELPER: The "Stat Pill"
+// ------------------------------------------------------
+class _StatPill extends StatelessWidget {
+  final int count;
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _StatPill({
+    required this.count, 
+    required this.icon, 
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 4),
+          Text(
+            "$count",
+            style: TextStyle(
+              fontSize: 16, 
+              fontWeight: FontWeight.bold, 
+              color: color
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10, 
+              color: color.withOpacity(0.8), 
+              fontWeight: FontWeight.w500
+            ),
+          ),
+        ],
       ),
     );
   }
