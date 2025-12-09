@@ -20,6 +20,7 @@ dependencies:
   flutter_colorpicker: ^1.1.0
   intl: ^0.20.2
   confetti: ^0.8.0
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
