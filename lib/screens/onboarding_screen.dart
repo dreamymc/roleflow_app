@@ -34,7 +34,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool _isSaving = false;
 
-  // --- 1. THE CUSTOMIZATION DIALOG ---
+  // --- 1. THE CUSTOMIZATION DIALOG (UPDATED) ---
   void _showRoleCreationDialog(String templateName) {
     String currentName = templateName == 'Custom' ? '' : templateName;
     // Default colors based on template vibe
@@ -70,42 +70,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onChanged: (val) => currentName = val,
                     ),
                     const SizedBox(height: 24),
-                    // Color Label
-                    Row(
-                      children: [
-                        Text(
-                          'Role Color Theme',
-                          style: TextStyle(color: Colors.grey[700]),
-                        ),
-                        const Spacer(),
-                        // Small preview circle
-                        CircleAvatar(backgroundColor: currentColor, radius: 12),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // The Color Picker Widget
-                    BlockPicker(
-                      pickerColor: currentColor,
-                      availableColors: const [
-                        Colors.blue,
-                        Colors.indigo,
-                        Colors.cyan,
-                        Colors.teal,
-                        Colors.green,
-                        Colors.lime,
-                        Colors.orange,
-                        Colors.deepOrange,
-                        Colors.red,
-                        Colors.pink,
-                        Colors.purple,
-                        Colors.deepPurple,
-                        Colors.blueGrey,
-                        Colors.brown,
-                      ],
-                      onColorChanged: (color) {
+
+                    // Color Picker Row (Now uses the PRO version)
+                    _buildProColorRow(
+                      context,
+                      'Role Color Theme',
+                      currentColor,
+                      (color) {
                         setStateDialog(() => currentColor = color);
                       },
                     ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -132,6 +107,129 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           },
         );
       },
+    );
+  }
+
+  // --- HELPER: PRO COLOR PICKER (WHEEL + RGB SLIDERS) ---
+  Widget _buildProColorRow(
+    BuildContext context,
+    String label,
+    Color currentColor,
+    Function(Color) onColorChanged,
+  ) {
+    return Row(
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[700])),
+        const Spacer(),
+        GestureDetector(
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (ctx) {
+                // Initialize local state for the dialog
+                Color pickerColor = currentColor;
+
+                return AlertDialog(
+                  contentPadding: const EdgeInsets.all(0),
+                  // SizedBox to control height of the TabBarView
+                  content: SizedBox(
+                    width: 340,
+                    height: 450,
+                    child: DefaultTabController(
+                      length: 2,
+                      child: StatefulBuilder(
+                        builder: (context, setDialogState) {
+                          return Column(
+                            children: [
+                              const TabBar(
+                                labelColor: Colors.black,
+                                unselectedLabelColor: Colors.grey,
+                                indicatorColor: Colors.black,
+                                tabs: [
+                                  Tab(text: "Visual Wheel"),
+                                  Tab(text: "RGB Inputs"),
+                                ],
+                              ),
+                              Expanded(
+                                child: TabBarView(
+                                  children: [
+                                    // TAB 1: THE DRAGGABLE WHEEL + HEX
+                                    SingleChildScrollView(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 16.0,
+                                        ),
+                                        child: ColorPicker(
+                                          pickerColor: pickerColor,
+                                          onColorChanged: (c) => setDialogState(
+                                            () => pickerColor = c,
+                                          ),
+                                          enableAlpha: false,
+                                          displayThumbColor: true,
+                                          hexInputBar: true, // Hex is Editable
+                                          paletteType: PaletteType.hsvWithHue,
+                                          labelTypes: const [],
+                                        ),
+                                      ),
+                                    ),
+                                    // TAB 2: THE RGB SLIDERS + TEXT FIELDS
+                                    Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: SlidePicker(
+                                        pickerColor: pickerColor,
+                                        onColorChanged: (c) => setDialogState(
+                                          () => pickerColor = c,
+                                        ),
+                                        enableAlpha: false,
+                                        displayThumbColor: true,
+                                        showLabel: true, // Shows R: 255
+                                        showIndicator: true,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      child: const Text('Cancel'),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                    FilledButton(
+                      child: const Text('Select'),
+                      onPressed: () {
+                        onColorChanged(pickerColor);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: currentColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Icon(
+              Icons.palette,
+              color: currentColor.computeLuminance() > 0.5
+                  ? Colors.black54
+                  : Colors.white70,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -172,9 +270,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (mounted) {
         // HACK: Force reload the application state.
-        // By replacing the current route with AuthGate again, it forces
-        // AuthGate to re-run its FutureBuilder check. Since roles now exist,
-        // it will redirect to HomeScreen.
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const AuthGate()),
         );

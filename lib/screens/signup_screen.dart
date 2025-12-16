@@ -26,7 +26,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    if (_nameController.text.isEmpty) {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
       setState(() => _errorMessage = "Please enter your name.");
       return;
     }
@@ -36,7 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _errorMessage = null;
     });
 
-    // 2. Call Firebase
+    // 2. Call Firebase for Sign Up
     final error = await _auth.signUpWithEmail(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
@@ -52,11 +53,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } else {
       // Success
+
+      // CRITICAL FIX: Update the display name in Firebase Auth profile
+      await _auth.updateUserName(name);
+
       if (mounted) {
         // Show "Check Email" dialog
         showDialog(
           context: context,
-          barrierDismissible: false, // User must click button
+          barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('Verify your email'),
             content: const Text(
@@ -65,11 +70,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  // Close dialog
                   Navigator.pop(context);
-                  // Close Sign Up screen (return to login or let AuthGate handle it)
-                  // Since AuthGate listens to state, they are technically logged in now.
-                  Navigator.pop(context); 
+                  Navigator.pop(context); // Close Sign Up screen
                 },
                 child: const Text('OK'),
               ),
@@ -119,7 +121,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     prefixIcon: const Icon(Icons.person_outline),
                   ),
                 ),
@@ -131,7 +135,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Email Address',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     prefixIcon: const Icon(Icons.email_outlined),
                   ),
                 ),
@@ -143,14 +149,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: Colors.grey,
                       ),
-                      onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible,
+                      ),
                     ),
                   ),
                 ),
@@ -162,9 +174,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     prefixIcon: const Icon(Icons.lock_clock_outlined),
-                    
                   ),
                 ),
 
@@ -193,11 +206,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text(
                           'Sign Up',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ],

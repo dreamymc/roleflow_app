@@ -8,7 +8,7 @@ import '../models/role.dart';
 // Helper class to store the summary + the "Fingerprint" of the data that generated it
 class _CachedSummary {
   final String text;
-  final String dataFingerprint; // Changed to String for the hash ID
+  final String dataFingerprint; 
 
   _CachedSummary(this.text, this.dataFingerprint);
 }
@@ -36,7 +36,7 @@ class AIService {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return "Error: User not logged in.";
       
-      // FIX: Get NOW in Local Time for accurate math
+      // Get NOW in Local Time for accurate math
       final now = DateTime.now().toLocal();
 
       // --- STEP A: GATHER DEEP CONTEXT ---
@@ -85,7 +85,6 @@ class AIService {
       // --- STEP B: GENERATE FINGERPRINT ---
       // We build a string of all data to see if anything changed.
       final taskListStr = taskSnap.docs.map((d) {
-        // FIX: Timezone aware comparison
         final deadline = (d['deadline'] as Timestamp).toDate().toLocal();
         
         // Calculate status explicitly in Dart
@@ -114,15 +113,8 @@ class AIService {
       // Create a unique ID for this exact state of data
       final currentFingerprint = (taskListStr + routineListStr + logsStr).hashCode.toString();
 
-      // --- STEP C: CHECK MEMORY CACHE ---
-      if (_cache.containsKey(role.id)) {
-        final cached = _cache[role.id]!;
-        if (cached.dataFingerprint == currentFingerprint) {
-          return cached.text; 
-        }
-      }
-
-      // --- STEP D: CHECK DATABASE PERSISTENCE ---
+      // --- STEP C: CHECK DATABASE PERSISTENCE ---
+      // We check DB first. If it matches, we assume it's valid and load it.
       final roleDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -140,10 +132,9 @@ class AIService {
         return savedSummary; 
       }
 
-      print("🔌 Data Changed. Calling Gemini API...");
+      print("🔌 Data Changed (or Error Retry). Calling Gemini API...");
 
-      // --- STEP E: THE PROMPT ---
-      // We inject Today's Date and the explicit Overdue tags
+      // --- STEP D: THE PROMPT ---
       final promptText = """
       You are analyzing the user's life role called '${role.name}'.
       
@@ -151,8 +142,8 @@ class AIService {
       1. Speak directly to the user as "You". 
       2. NEVER address the user as "${role.name}" (that is a category, not a person).
       3. Give suggestions about what the user can do right now and DO NOT ask questions like "How about...".
-      4. Just give a pure, direct analysis of their balance and consistency.
-      5. Keep it natural, encouraging, and under 3 sentences.
+      4. Just give a pure, specific analysis of their balance and consistency.
+      5. Keep it natural, encouraging, and under 5 sentences.
       
       TODAY'S DATE: ${DateFormat('yyyy-MM-dd').format(now)}
       
@@ -169,31 +160,42 @@ class AIService {
       $logsStr
       """;
 
-      // --- STEP F: CALL API & SAVE ---
+      // --- STEP E: CALL API & SAVE ---
       final content = [Content.text(promptText)];
       final response = await _model.generateContent(content);
-      final responseText = response.text ?? "AI unavailable.";
-
-      // Save to Memory
-      _cache[role.id] = _CachedSummary(responseText, currentFingerprint);
-
-      // Save to Database
-      await FirebaseFirestore.instance
+      
+      // FIX: Only save if we actually got a real response
+      if (response.text != null && response.text!.isNotEmpty) {
+        final validText = response.text!;
+        
+        // Save to Database (ONLY SUCCESSES)
+        await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('roles')
           .doc(role.id)
           .update({
-            'aiSummary': responseText,
-            'aiFingerprint': currentFingerprint,
+            'aiSummary': validText,
+            'aiFingerprint': currentFingerprint, // Only "lock" the fingerprint if we succeeded
             'aiLastUpdated': FieldValue.serverTimestamp(),
           });
-
-      return responseText;
+          
+         // Save to Memory
+         _cache[role.id] = _CachedSummary(validText, currentFingerprint);
+         
+         return validText;
+      } else {
+        // If empty, return error but DO NOT save it. 
+        // Next time user refreshes, it will try again.
+        return "AI Response was empty. Tap refresh to try again.";
+      }
 
     } catch (e) {
       print("AI Error: $e");
-      return "AI Summary is currently unavailable, reload the page or wait later..";
+      // CRITICAL: We DO NOT save errors to Firestore.
+      // This ensures the next time this runs, it sees the fingerprint mismatch 
+      // (or missing fingerprint) and tries again automatically.
+      return "AI Service Unavailable. Tap refresh to try again.";
     }
   }
 }

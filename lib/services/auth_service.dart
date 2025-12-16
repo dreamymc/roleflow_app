@@ -13,6 +13,18 @@ class AuthService {
 
   // --- EMAIL & PASSWORD ---
 
+  // Inside AuthService class in auth_service.dart
+
+  // NEW FUNCTION TO UPDATE USER PROFILE NAME
+  Future<void> updateUserName(String name) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await user.updateDisplayName(name);
+      // Force a local refresh of the user object
+      await user.reload();
+    }
+  }
+
   Future<String?> signUpWithEmail({
     required String email,
     required String password,
@@ -37,10 +49,7 @@ class AuthService {
     required String password,
   }) async {
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
       return null; // Success
     } on FirebaseAuthException catch (e) {
       return _handleAuthError(e);
@@ -69,7 +78,8 @@ class AuthService {
       if (googleUser == null) return "Google sign in cancelled by user.";
 
       // 2. Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // 3. Create a new credential
       final credential = GoogleAuthProvider.credential(
